@@ -33,10 +33,6 @@ config['handlers']['file_info']['filename'] = f'./checkpoints/post_{TIME_STAMP}/
 logging.config.dictConfig(config)
 logger = logging.getLogger()
 
-# logging.basicConfig(level = logging.INFO,format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-# logger = logging.getLogger(__name__)
-# logger.setLevel(level = logging.WARNING)
-
 def train(train_iter, net, device, num_steps,optimizer,schedule):
     '''
         正式开始训练
