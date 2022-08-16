@@ -1,7 +1,7 @@
 # Cross-Domain-SA
 A BERT-based model trying to transfer knowledge from source to target domain.
 
-Baseline is a MLP injected after BERT, trained by source labeled data.
+Baseline is a MLP injected after the [CLS] token embedding of BERT, trained by source labeled data.
 
 Here take two points to improve the baseline.
 
