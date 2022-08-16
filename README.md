@@ -6,7 +6,7 @@ Baseline is a MLP injected after BERT, trained by source labeled data.
 Here take two points to improve the baseline.
 
 - Post training
-  1. Reconstruct the structure of NSP. Namely, each input contain two sentences. One from SOURCE and one from TARGET is labeled 'is_mix'=1, while both from TARGET is labeled 'is_mix'=0. Take it to a classification problem with 2 categories.
+  1. Reconstruct the structure of NSP. Namely, each input contain two sentences. One from SOURCE and one from TARGET is labeled 'is_mix'=1, while both from TARGET is labeled 'is_mix'=0. It is a classification problem with 2 categories.
   2. Reconstruct the structure of MLM. Namely, ONLY mask the tokens in target domain
   
 - Adversarial training
