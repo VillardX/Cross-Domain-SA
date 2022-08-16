@@ -14,4 +14,9 @@ The above two strategies aim to make vanilla BERT foucus more on source domain a
   
 - Adversarial training
 
-  Here the structure of DANN is taken into consideration. The thought originated from GAN. The core of it is the gradient reversal layer, which changes the min-max optimization problem to an E2E loss optimization problem with simple BP process.
+  Here the structure of DANN is taken into consideration. The thought originated from GAN. The core of it is the gradient reversal layer, which changes the min-max optimization problem to an E2E loss optimization problem with simple BP process. To be more detailed, it is consisted of two units.
+   
+   1. sentiment classifier: trained by labeled source data.
+   2. domain discriminator: check each input whether it is comes from source domain or target domain. The domain discriminator aims to clearly classify, while the BERT as feature extractor here intends to confuses the domain discriminator, aiming to get DOMAIN-INVARIANT features of both domains , which we call adversarial training. By acquiring DOMAIN-INVARIANT features, it is possible to transfer the knowledge from source domain. Via GRL, the domain discriminator and feature extractor can be trained together instead of min-max optimization. 
+  
+The above two strategies are trained in an E2E way, aiming to transfer the sentiment knowledge from source to domain.
