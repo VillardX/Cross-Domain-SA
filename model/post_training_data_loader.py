@@ -31,6 +31,10 @@ config['handlers']['file_info']['filename'] = f'./checkpoints/post_{TIME_STAMP}/
 logging.config.dictConfig(config)
 logger = logging.getLogger()
 
+# logging.basicConfig(level = logging.INFO,format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+# logger = logging.getLogger(__name__)
+# logger.setLevel(level = logging.WARNING)
+
 class PostTraining(Dataset):
     def __init__(self, MAX_LEN, tokenizer):
         self.tokenizer = tokenizer
@@ -81,12 +85,12 @@ class PostTraining(Dataset):
         #返回的内容还要改改#####
         tensors = (torch.tensor(features.raw_input_ids),
                     torch.tensor(features.masked_input_ids),
-                    torch.tensor(features.input_mask),
-                    torch.tensor(features.segment_ids),
+                    torch.tensor(features.input_mask),#即attention_mask
+                    torch.tensor(features.segment_ids),#即token_type_ids
                     torch.tensor(features.is_mix),
-                    torch.tensor(features.mlm_pred_positions),
-                    torch.tensor(features.mlm_true_ids),
-                    torch.tensor(features.mlm_weights))
+                    torch.tensor(features.mlm_pred_positions),#已经完成padding
+                    torch.tensor(features.mlm_true_ids),#已经完成padding
+                    torch.tensor(features.mlm_weights))#长度同上面两个
 
         return tensors
     
@@ -196,7 +200,7 @@ def random_word2(tokensAB, whether_do_mlm_listAB,tokenizer):
         if whether_do_mlm_listAB[i] == 1:#说明是target-domain
             prob = random.random()
             # mask token with 15% probability
-            # 此处使用了15%概率而不是比例，和原文bert有一定差别#后面计算mlm损失时，如果采用概率处理，则padding得maxlen才最保险，否则担心会溢出
+            # 此处使用了15%概率而不是比例，和原文bert有一定差别#后面计算mlm损失时，如果采用概率处理，则padding得maxlen才最保险，否则可能会溢出
             if prob < 0.15:#说明要进行mask
                 prob /= 0.15
                 #此处沿用bert原文的80，10，10配比
@@ -211,6 +215,7 @@ def random_word2(tokensAB, whether_do_mlm_listAB,tokenizer):
     # padding词元的预测将通过乘以0权重在损失中过滤掉,总长度即masked_tokensAB的长度
     # mlm_weights = ([1.0]*len(pred_positions) + [0.0]*(len(tokensAB)-len(pred_positions)))#
     return masked_tokensAB,pred_positions,true_tokens
+
 
 def _concate_tokensAB(tokens_a,tokens_b,a_domain_label,b_domain_label):
     '''
@@ -278,8 +283,8 @@ def convert_example_to_features(example, tokenizer, max_seq_length):
     #padding的时候注意分开处理
     masked_input_ids = tokenizer.convert_tokens_to_ids(masked_tokens)
     mlm_true_ids = tokenizer.convert_tokens_to_ids(mlm_true_tokens)
-    mlm_weights = [1.0]*len(mlm_pred_positions)#至mlm的位置权重为1后面padding设置其他位置为0  
-    
+    mlm_weights = [1.0]*len(mlm_pred_positions)#至mlm的位置权重为1后面padding设置其他位置为0
+
     #padding
     while len(raw_input_ids) < max_seq_length:
         raw_input_ids.append(0)
@@ -298,7 +303,7 @@ def convert_example_to_features(example, tokenizer, max_seq_length):
         mlm_true_ids.append(0)
         mlm_weights.append(0)
 
-    if example.guid < 5:#只取前1条数据作展示
+    if example.guid < 1:#只取前1条数据作展示
         logger.info("*** Example ***")
         logger.info("guid: %s" % (example.guid))
         logger.info("tokens: %s" % " ".join(
@@ -329,3 +334,95 @@ def convert_example_to_features(example, tokenizer, max_seq_length):
                              mlm_true_ids=mlm_true_ids,
                              mlm_weights=mlm_weights)
     return features
+
+def main(args):
+    set_seeds()
+
+    print('开启训练模式'+'*'*50)
+
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    model = PostTrainingModel(args, device).to(device)
+    tokenizer = AutoTokenizer.from_pretrained(args.bert_model)
+    train_dataset = PostTraining(args, tokenizer)
+    train_dataloader = DataLoader(train_dataset, sampler=RandomSampler(train_dataset), batch_size=args.train_batch_size,num_workers=8)
+
+    if args.max_steps > 0:
+        t_total = args.max_steps
+        args.num_train_epochs = args.max_steps // (len(train_dataloader) // args.gradient_accumulation_steps) + 1
+    else:
+        t_total = len(train_dataloader) // args.gradient_accumulation_steps * args.num_train_epochs
+
+    param_optimizer = list(model.named_parameters())
+    no_decay = ['bias', 'LayerNorm.bias', 'LayerNorm.weight']
+    optimizer_grouped_parameters = [
+        {'params': [p for n, p in param_optimizer if not any(nd in n for nd in no_decay)], 'weight_decay': 0.01},
+        {'params': [p for n, p in param_optimizer if any(nd in n for nd in no_decay)], 'weight_decay': 0.0}
+        ]
+
+    optimizer = AdamW(optimizer_grouped_parameters, lr=args.learning_rate, eps=args.adam_epsilon)
+    #scheduler是对optimizer学习率的适时调整
+    scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=args.warmup_steps, num_training_steps=t_total)
+
+    logger.info("***** Running training *****")
+    logger.info("  Num examples = %d", len(train_dataset))
+    logger.info("  Batch size = %d", args.train_batch_size)
+    logger.info("  Num steps = %d", t_total)
+    logger.info("  Num epochs = %d", args.num_train_epochs)
+    logger.info("  Learning rate = %d", args.learning_rate)
+    
+    global_step = 0
+    train_iterator = trange(int(args.num_train_epochs), desc="Epoch")
+    model.train()#开启训练模式
+    for epoch in train_iterator:
+        tr_loss = 0
+        nb_tr_examples, nb_tr_steps = 0, 0
+        epoch_iterator = tqdm(train_dataloader, desc="Iteration")
+        for step, batch in enumerate(epoch_iterator):
+            optimizer.zero_grad()#记得和model.zero_grad()进行区别
+
+            batch = tuple(t.to(device) for t in batch)
+            input_ids, input_mask, segment_ids, mlm_label_ids, is_mix = batch
+            
+            outputs = model(input_ids=input_ids, token_type_ids=segment_ids, attention_mask=input_mask, labels=mlm_label_ids, next_sentence_label=is_mix)
+            loss = outputs[0]
+        
+            loss.backward()#保留每个节点的梯度，每次累加
+            tr_loss += loss.item()#显示更高精度的loss
+            nb_tr_steps += 1
+            
+            #到需要更新的时候将之前的梯度积攒在一起一并更新
+            #参https://zhuanlan.zhihu.com/p/445009191
+            #累积一段时间，再一并跟新
+            if (step + 1) % args.gradient_accumulation_steps == 0:
+                optimizer.step()#先调整梯度，进行回传
+                scheduler.step() #而后调整optimizer的学习率
+                model.zero_grad()#最后模型梯度重置为0，进行新的计算
+                global_step += 1
+
+            if 0 < args.max_steps < global_step:
+                epoch_iterator.close()
+                break
+                
+            # sys.stdout.write('\r epoch: %d, [iter: %d / all %d]' \
+            #   % (epoch, step + 1, len(epoch_iterator)))
+            # sys.stdout.flush()
+
+        if 0 < args.max_steps < global_step:
+            train_iterator.close()
+            break
+
+    if not os.path.exists(args.output_dir):
+            os.mkdir(args.output_dir)
+        # Save a trained model
+
+    model_to_save = model.module if hasattr(model, 'module') else model  # Only save the model it-self
+    print(WEIGHTS_NAME)
+    print(CONFIG_NAME)
+    output_model_file = os.path.join(args.output_dir, WEIGHTS_NAME)
+    # output_config_file = os.path.join(args.output_dir, CONFIG_NAME)
+    torch.save(model_to_save.state_dict(), output_model_file)
+    # model_to_save.args.to_json_file(output_config_file)
+    tokenizer.save_vocabulary(args.output_dir)
+    logger.info(f'train loss = {tr_loss / global_step}')
+    logger.info(f'global steps = {global_step}')
+    logger.info("=========== Saving fine - tuned model ===========")
