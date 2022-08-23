@@ -10,7 +10,7 @@ Two strategies are taken to improve the baseline.
   1. Reconstruct the structure of NSP. Namely, each input contain two sentences. One from SOURCE and one from TARGET is labeled 'is_mix'=1, while both from TARGET is labeled 'is_mix'=0. It is a classification problem with 2 categories.
   2. Reconstruct the structure of MLM. Namely, ONLY mask the tokens in target domain.
 
-The above two strategies aim to make vanilla BERT foucus more on source domain and target domain in our task, espcially the target domain, instead of the general corpus from all kinds of domains, which is used to pre-train the vanilla BERT.
+The above two strategies aim to make vanilla BERT focus more on source domain and target domain in our task, espcially the target domain, instead of the general corpus from all kinds of domains, which is used to pre-train the vanilla BERT.
   
 - Adversarial training
 
