@@ -153,8 +153,7 @@ for epoch in range(n_epoch):####应该设置train和eval模式
         s_attention_mask = data_source['attention_mask'].to(device)
         s_token_type_ids = data_source['token_type_ids'].to(device)
 
-        my_net.zero_grad()#初始化？？？
-        ###这个batch_size是否就是最开始设置的batch_size????
+        my_net.zero_grad()
 
         domain_label = torch.zeros(BATCH_SIZE_source).long().to(device)#domain的label
 
