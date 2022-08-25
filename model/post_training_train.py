@@ -27,17 +27,14 @@ TIME_STAMP = datetime.now().strftime('%Y-%m-%dT%H:%M')
 if not os.path.exists(f'./checkpoints/post_{TIME_STAMP}'):
     # logger.info(f'./checkpoints/post_{TIME_STAMP} not existed, so create it')
     os.mkdir(f'./checkpoints/post_{TIME_STAMP}')
+else:print('existed-train-part')
+
+
 config = yaml.load(open('./post_logger.yml'), Loader=yaml.FullLoader)
 config['handlers']['file_info']['filename'] = f'./checkpoints/post_{TIME_STAMP}/train.log'
 
 logging.config.dictConfig(config)
 logger = logging.getLogger()
-
-
-
-# logging.basicConfig(level = logging.INFO,format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-# logger = logging.getLogger(__name__)
-# logger.setLevel(level = logging.WARNING)
 
 def post_train(train_loader, net, device, num_steps,optimizer,schedule):
     '''
@@ -112,13 +109,6 @@ def main(args):
                                  batch_size=args.train_batch_size,
                                  num_workers=8)
 
-
-    # if args.max_steps > 0:
-    #     t_total = args.max_steps
-    #     args.num_train_epochs = args.max_steps // (len(train_dataloader) // args.gradient_accumulation_steps) + 1
-    # else:
-    #     t_total = len(train_dataloader) // args.gradient_accumulation_steps * args.num_train_epochs
-
     param_optimizer = list(model.named_parameters())
     no_decay = ['bias', 'LayerNorm.bias', 'LayerNorm.weight']
     optimizer_grouped_parameters = [
@@ -167,82 +157,86 @@ def main(args):
     # logger.info(f'global steps = {args.num_steps}')
     logger.info("=========== Saving fine - tuned model ===========")
 
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+        
+    print('开启参数设置')
+
+    ## Required parameters
+    parser.add_argument("--train_corpus",
+                        default='../data/',
+                        type=str,
+                        help="The input train corpus. sports or tv")
+    parser.add_argument("--mix_domain",
+                        default='../data/',
+                        type=str,
+                        help="The input train corpus. sports or tv")
+    parser.add_argument("--bert_model", default='../PLMs/bert_base_chinese', type=str,
+                        help="Bert pre-trained model selected in the list: bert-base-uncased, "
+                                "bert-large-uncased, bert-base-cased, bert-base-multilingual, bert-base-chinese.")
+    parser.add_argument("--output_dir",
+                        default=f'./checkpoints/post_{TIME_STAMP}/',
+                        type=str,
+                        help="The output directory where the model checkpoints will be written.")
+
+    ## Other parameters
+    parser.add_argument("--max_seq_length",
+                        default=512,
+                        type=int,
+                        help="The maximum total input sequence length after WordPiece tokenization. \n"
+                                "Sequences longer than this will be truncated, and sequences shorter \n"
+                                "than this will be padded.")
+    parser.add_argument("--do_train",
+                        action='store_true',
+                        help="Whether to run training.")
+    parser.add_argument("--train_batch_size",
+                        default=8,
+                        type=int,
+                        help="Total batch size for training.")
+    parser.add_argument("--learning_rate",
+                        default=2e-5,
+                        type=float,
+                        help="The initial learning rate for Adam.")
+    parser.add_argument("--num_train_epochs",
+                        default=5.0,
+                        type=float,
+                        help="Total number of training epochs to perform.")
+
+    parser.add_argument("--num_steps",
+                        default=20000,
+                        type=int,
+                        help="Total number of training batch times to perform.")
+    parser.add_argument("--warmup_proportion",
+                        default=0.1,
+                        type=float,
+                        help="Proportion of training to perform linear learning rate warmup for. "
+                                "E.g., 0.1 = 10%% of training.")
+    parser.add_argument("--no_cuda",
+                        action='store_true',#设置了一个开关https://blog.csdn.net/qq_31347869/article/details/104837836
+                        default=False,
+                        help="Whether not to use CUDA when available")
+    parser.add_argument("--local_rank",
+                        type=int,
+                        default=-1,
+                        help="local_rank for distributed training on gpus")
+    parser.add_argument('--seed',
+                        type=int,
+                        default=42,
+                        help="random seed for initialization")
+    parser.add_argument('--gradient_accumulation_steps',
+                        type=int,
+                        default=1,
+                        help="Number of updates steps to accumualte before performing a backward/update pass.")
+    parser.add_argument("--warmup_steps", default=0, type=int, help="Linear warmup over warmup_steps.")
+    parser.add_argument("--adam_epsilon", default=1e-8, type=float, help="Epsilon for Adam optimizer.")
+    parser.add_argument("--max_steps", default=10000, type=int, help="Maximum steps size")
+    parser.add_argument("--hidden_size", default=768, type=int, help="Hidden Vector size")
 
 
-parser = argparse.ArgumentParser()
-    
 
-## Required parameters
-parser.add_argument("--train_corpus",
-                    default='../data/',
-                    type=str,
-                    help="The input train corpus. sports or tv")
-parser.add_argument("--mix_domain",
-                    default='../data/',
-                    type=str,
-                    help="The input train corpus. sports or tv")
-parser.add_argument("--bert_model", default='../PLMs/bert_base_chinese', type=str,
-                    help="Bert pre-trained model selected in the list: bert-base-uncased, "
-                            "bert-large-uncased, bert-base-cased, bert-base-multilingual, bert-base-chinese.")
-parser.add_argument("--output_dir",
-                    default=f'./checkpoints/post_{TIME_STAMP}/',
-                    type=str,
-                    help="The output directory where the model checkpoints will be written.")
+    args = parser.parse_args(args=[]) #notbook中要加args=[]
 
-## Other parameters
-parser.add_argument("--max_seq_length",
-                    default=512,
-                    type=int,
-                    help="The maximum total input sequence length after WordPiece tokenization. \n"
-                            "Sequences longer than this will be truncated, and sequences shorter \n"
-                            "than this will be padded.")
-parser.add_argument("--do_train",
-                    action='store_true',
-                    help="Whether to run training.")
-parser.add_argument("--train_batch_size",
-                    default=8,
-                    type=int,
-                    help="Total batch size for training.")
-parser.add_argument("--learning_rate",
-                    default=2e-5,
-                    type=float,
-                    help="The initial learning rate for Adam.")
-parser.add_argument("--num_train_epochs",
-                    default=5.0,
-                    type=float,
-                    help="Total number of training epochs to perform.")
-
-parser.add_argument("--num_steps",
-                    default=20000,
-                    type=int,
-                    help="Total number of training batch times to perform.")
-parser.add_argument("--warmup_proportion",
-                    default=0.1,
-                    type=float,
-                    help="Proportion of training to perform linear learning rate warmup for. "
-                            "E.g., 0.1 = 10%% of training.")
-parser.add_argument("--no_cuda",
-                    action='store_true',#设置了一个开关https://blog.csdn.net/qq_31347869/article/details/104837836
-                    default=False,
-                    help="Whether not to use CUDA when available")
-parser.add_argument("--local_rank",
-                    type=int,
-                    default=-1,
-                    help="local_rank for distributed training on gpus")
-parser.add_argument('--seed',
-                    type=int,
-                    default=42,
-                    help="random seed for initialization")
-parser.add_argument('--gradient_accumulation_steps',
-                    type=int,
-                    default=1,
-                    help="Number of updates steps to accumualte before performing a backward/update pass.")
-parser.add_argument("--warmup_steps", default=0, type=int, help="Linear warmup over warmup_steps.")
-parser.add_argument("--adam_epsilon", default=1e-8, type=float, help="Epsilon for Adam optimizer.")
-parser.add_argument("--max_steps", default=10000, type=int, help="Maximum steps size")
-parser.add_argument("--hidden_size", default=768, type=int, help="Hidden Vector size")
-
-args = parser.parse_args(args=[]) #notbook中要加args=[]
-
-main(args)
+    print('完成参数设置')
+    print('开始运行主函数')
+    main(args)
 
