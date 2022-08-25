@@ -61,11 +61,3 @@ class BERT_raw_classifier(nn.Module):
     class_output = self.class_classifier(pooler_output)
     return class_output
   
-class posting_training():
-  '''
-    进行后训练
-    分两步：
-      ①使用领域数据进行进一步MLM改进DDT训练
-      ②使用两部分数据进行NSP改进训练
-  '''
-  pass
