@@ -23,3 +23,13 @@ The above two strategies aim to make vanilla BERT focus more on source domain an
    2. domain discriminator: check each input whether it is comes from source domain or target domain. The domain discriminator aims to clearly classify, while the BERT as feature extractor here intends to confuses the domain discriminator, aiming to get DOMAIN-INVARIANT features of both domains , which we call adversarial training. By acquiring DOMAIN-INVARIANT features, it is possible to transfer the knowledge from source domain. Via GRL, the domain discriminator and feature extractor can be trained together instead of min-max optimization. 
   
   The above two strategies are trained in an E2E way, aiming to transfer the sentiment knowledge from source to domain.
+
+## Experiment Result (raw)
+- Baseline
+  Vanilla Bert trained with source labeled data. The accuracy on target data is about 88%. 
+- The method mentioned above
+  The accuracy on target data is about 90%(about 2% absolute improvement).
+
+## Future
+- Improve the PLM as feature extractor like ELECTRA (originated from GAN), roberta, etc.
+- Imply a more fine-grained sentiment analysis transfer learning quest, namely ABSA, in the use of this structure.
