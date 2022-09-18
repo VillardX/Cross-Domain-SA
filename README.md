@@ -26,9 +26,11 @@ The above two strategies aim to make vanilla BERT focus more on source domain an
 
 ## Experiment Result (raw)
 - Baseline
+
   Vanilla Bert trained with source labeled data. The accuracy on target data is about 88%. 
   
 - The method mentioned above
+
   The accuracy on target data is about 90%(about 2% absolute improvement).
 
 ## Future
