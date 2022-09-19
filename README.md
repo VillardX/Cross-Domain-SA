@@ -33,7 +33,7 @@ The above two strategies aim to make vanilla BERT focus more on source domain an
 
   The accuracy on target data is about 90%(about 2% absolute improvement).
 
-## Future
+## Future Work
 - Improve the PLM as feature extractor like ELECTRA (originated from GAN), roberta, etc.
 
 - Implement a more fine-grained sentiment analysis transfer learning quest, namely ABSA, in the use of this structure.
