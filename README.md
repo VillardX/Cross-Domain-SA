@@ -36,4 +36,4 @@ The above two strategies aim to make vanilla BERT focus more on source domain an
 ## Future
 - Improve the PLM as feature extractor like ELECTRA (originated from GAN), roberta, etc.
 
-- Conduct a more fine-grained sentiment analysis transfer learning quest, namely ABSA, in the use of this structure.
+- Implement a more fine-grained sentiment analysis transfer learning quest, namely ABSA, in the use of this structure.
