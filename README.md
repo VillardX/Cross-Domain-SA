@@ -24,6 +24,8 @@ The above two strategies aim to make vanilla BERT focus more on source domain an
   
   The above two strategies are trained in an E2E way, aiming to transfer the sentiment knowledge from source to domain.
 
+
+<!--这些是注释文本，不会显示
 ## Experiment Result (raw)
 - Baseline
 
@@ -32,6 +34,8 @@ The above two strategies aim to make vanilla BERT focus more on source domain an
 - The method mentioned above
 
   The accuracy on target data is about 90%(about 2% absolute improvement).
+-->
+
 
 ## Future Work
 - Improve the PLM as feature extractor like ELECTRA (originated from GAN), roberta, etc.
